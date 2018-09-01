@@ -67,6 +67,7 @@ public class AddressBook {
      * =========================================================================
      */
     private static final String MESSAGE_ADDED = "New person added: %1$s, Phone: %2$s, Email: %3$s";
+    private static final String MESSAGE_EDITED = "Person edited: %1$s, Phone: %2$s, Email: %3$s";
     private static final String MESSAGE_ADDRESSBOOK_CLEARED = "Address book has been cleared!";
     private static final String MESSAGE_COMMAND_HELP = "%1$s: %2$s";
     private static final String MESSAGE_COMMAND_HELP_PARAMETERS = "\tParameters: %1$s";
@@ -95,6 +96,7 @@ public class AddressBook {
     // These are the prefix strings to define the data type of a command parameter
     private static final String PERSON_DATA_PREFIX_PHONE = "p/";
     private static final String PERSON_DATA_PREFIX_EMAIL = "e/";
+    private static final String PERSON_DATA_PREFIX_INDEX = "i/";
 
     private static final String PERSON_STRING_REPRESENTATION = "%1$s " // name
                                                             + PERSON_DATA_PREFIX_PHONE + "%2$s " // phone
@@ -105,6 +107,14 @@ public class AddressBook {
                                                       + PERSON_DATA_PREFIX_PHONE + "PHONE_NUMBER "
                                                       + PERSON_DATA_PREFIX_EMAIL + "EMAIL";
     private static final String COMMAND_ADD_EXAMPLE = COMMAND_ADD_WORD + " John Doe p/98765432 e/johnd@gmail.com";
+
+    private static final String COMMAND_EDIT_WORD = "edit";
+    private static final String COMMAND_EDIT_DESC = "Edit a person in the address book.";
+    private static final String COMMAND_EDIT_PARAMETERS ="NAME "
+            + PERSON_DATA_PREFIX_PHONE + "PHONE_NUMBER "
+            + PERSON_DATA_PREFIX_EMAIL + "EMAIL"
+            + PERSON_DATA_PREFIX_INDEX + "INDEX";
+    private static final String COMMAND_EDIT_EXAMPLE = COMMAND_EDIT_WORD + "John Doe p/98765432 e/johnd@gmail.com i/1";
 
     private static final String COMMAND_FIND_WORD = "find";
     private static final String COMMAND_FIND_DESC = "Finds all persons whose names contain any of the specified "
@@ -382,6 +392,8 @@ public class AddressBook {
             return executeListAllPersonsInAddressBook();
         case COMMAND_SORT_WORD:
             return executeSortAllPersonsInAddressBook();
+        case COMMAND_EDIT_WORD:
+            return executeEditPersoninAddressBook(commandArgs);
         case COMMAND_DELETE_WORD:
             return executeDeletePerson(commandArgs);
         case COMMAND_CLEAR_WORD:
@@ -437,6 +449,19 @@ public class AddressBook {
         return getMessageForSuccessfulAddPerson(personToAdd);
     }
 
+    private static String executeEditPersoninAddressBook (String commandArgs) {
+        // try decoding a person from the raw args
+        final Optional<String[]> decodeResult = decodePersonFromEditString(commandArgs);
+
+        // checks if args are valid (decode result will not be present if the person is invalid)
+        if (!decodeResult.isPresent()) {
+            return getMessageForInvalidCommandInput(COMMAND_EDIT_WORD, getUsageInfoForEditCommand());
+        }
+
+        final String[] personToAdd = decodeResult.get();
+        editPersoninAddressBook(extractIndexFromPersonString(commandArgs)-1,personToAdd);
+        return getMessageForSuccessfulEditPerson(personToAdd);
+    }
     /**
      * Constructs a feedback message for a successful add person command execution.
      *
@@ -446,6 +471,11 @@ public class AddressBook {
      */
     private static String getMessageForSuccessfulAddPerson(String[] addedPerson) {
         return String.format(MESSAGE_ADDED,
+                getNameFromPerson(addedPerson), getPhoneFromPerson(addedPerson), getEmailFromPerson(addedPerson));
+    }
+
+    private static String getMessageForSuccessfulEditPerson(String[] addedPerson) {
+        return String.format(MESSAGE_EDITED,
                 getNameFromPerson(addedPerson), getPhoneFromPerson(addedPerson), getEmailFromPerson(addedPerson));
     }
 
@@ -813,6 +843,17 @@ public class AddressBook {
         ALL_PERSONS.add(person);
         savePersonsToFile(getAllPersonsInAddressBook(), storageFilePath);
     }
+    /**
+     * Edit a person in the address book. Saves changes to storage file.
+     *
+     * @param person to edit
+     */
+    private static void editPersoninAddressBook(int person, String[] edit) {
+        ALL_PERSONS.get(person)[PERSON_DATA_INDEX_EMAIL]= edit[PERSON_DATA_INDEX_EMAIL];
+        ALL_PERSONS.get(person)[PERSON_DATA_INDEX_NAME]= edit[PERSON_DATA_INDEX_NAME];
+        ALL_PERSONS.get(person)[PERSON_DATA_INDEX_PHONE]= edit[PERSON_DATA_INDEX_PHONE];
+        savePersonsToFile(getAllPersonsInAddressBook(), storageFilePath);
+    }
 
     /**
      * Deletes the specified person from the addressbook if it is inside. Saves any changes to storage file.
@@ -955,7 +996,29 @@ public class AddressBook {
         // check that the constructed person is valid
         return isPersonDataValid(decodedPerson) ? Optional.of(decodedPerson) : Optional.empty();
     }
-
+    /**
+     * Decodes a person from it's supposed string representation for edits.
+     *
+     * @param encoded string to be decoded
+     * @return if cannot decode: empty Optional
+     *         else: Optional containing decoded person
+     */
+    private static Optional<String[]> decodePersonFromEditString(String encoded) {
+        // check that we can extract the parts of a person from the encoded string
+        final String matchAnyPersonDataPrefix = PERSON_DATA_PREFIX_PHONE + '|' + PERSON_DATA_PREFIX_EMAIL + '|' + PERSON_DATA_PREFIX_INDEX;
+        final String[] splitArgs = encoded.trim().split(matchAnyPersonDataPrefix);
+        if (!(splitArgs.length == 4 // 3 arguments
+                && !splitArgs[0].isEmpty() // non-empty arguments
+                && !splitArgs[1].isEmpty()
+                && !splitArgs[2].isEmpty()
+                && !splitArgs[3].isEmpty())) { return Optional.empty(); }
+        final String[] decodedPerson = new String[3];
+                decodedPerson[PERSON_DATA_INDEX_NAME] = extractNameFromPersonString(encoded);
+                decodedPerson[PERSON_DATA_INDEX_PHONE] = extractPhoneFromPersonString(encoded);
+                decodedPerson[PERSON_DATA_INDEX_EMAIL] = extractEmailFromPersonStringEdit(encoded);
+        // check that the constructed person is valid
+        return isPersonDataValid(decodedPerson) ? Optional.of(decodedPerson) : Optional.empty();
+    }
     /**
      * Decodes persons from a list of string representations.
      *
@@ -1049,6 +1112,23 @@ public class AddressBook {
                     PERSON_DATA_PREFIX_EMAIL);
         }
     }
+    private static String extractEmailFromPersonStringEdit(String encoded) {
+        final int indexOfIndexPrefix = encoded.indexOf(PERSON_DATA_PREFIX_INDEX);
+        final int indexOfEmailPrefix = encoded.indexOf(PERSON_DATA_PREFIX_EMAIL);
+
+            // email is middle arg, target is from own prefix to next prefix
+            return removePrefixSign(
+                    encoded.substring(indexOfEmailPrefix, indexOfIndexPrefix).trim(),
+                    PERSON_DATA_PREFIX_EMAIL);
+    }
+
+    private static int extractIndexFromPersonString(String encoded) {
+        final int indexOfIndexPrefix = encoded.indexOf(PERSON_DATA_PREFIX_INDEX);
+
+        // email is middle arg, target is from own prefix to next prefix
+        return Integer.parseInt(removePrefixSign(encoded.substring(indexOfIndexPrefix, encoded.length()).trim(),
+                PERSON_DATA_PREFIX_INDEX));
+    }
 
     /**
      * Returns true if the given person's data fields are valid
@@ -1113,6 +1193,8 @@ public class AddressBook {
                 + getUsageInfoForFindCommand() + LS
                 + getUsageInfoForViewCommand() + LS
                 + getUsageInfoForDeleteCommand() + LS
+                + getUsageInfoForSortCommand() + LS
+                + getUsageInfoForEditCommand() + LS
                 + getUsageInfoForClearCommand() + LS
                 + getUsageInfoForExitCommand() + LS
                 + getUsageInfoForHelpCommand();
@@ -1123,6 +1205,13 @@ public class AddressBook {
         return String.format(MESSAGE_COMMAND_HELP, COMMAND_ADD_WORD, COMMAND_ADD_DESC) + LS
                 + String.format(MESSAGE_COMMAND_HELP_PARAMETERS, COMMAND_ADD_PARAMETERS) + LS
                 + String.format(MESSAGE_COMMAND_HELP_EXAMPLE, COMMAND_ADD_EXAMPLE) + LS;
+    }
+
+    /** Returns the string for showing 'edit' command usage instruction */
+    private static String getUsageInfoForEditCommand() {
+        return String.format(MESSAGE_COMMAND_HELP, COMMAND_EDIT_WORD, COMMAND_EDIT_DESC) + LS
+                + String.format(MESSAGE_COMMAND_HELP_PARAMETERS, COMMAND_EDIT_PARAMETERS) + LS
+                + String.format(MESSAGE_COMMAND_HELP_EXAMPLE, COMMAND_EDIT_EXAMPLE) + LS;
     }
 
     /** Returns the string for showing 'find' command usage instruction */
@@ -1149,6 +1238,12 @@ public class AddressBook {
     private static String getUsageInfoForViewCommand() {
         return String.format(MESSAGE_COMMAND_HELP, COMMAND_LIST_WORD, COMMAND_LIST_DESC) + LS
                 + String.format(MESSAGE_COMMAND_HELP_EXAMPLE, COMMAND_LIST_EXAMPLE) + LS;
+    }
+
+    /** Returns string for showing 'sort' command usage instruction */
+    private static String getUsageInfoForSortCommand() {
+        return String.format(MESSAGE_COMMAND_HELP, COMMAND_SORT_WORD, COMMAND_SORT_DESC) + LS
+                + String.format(MESSAGE_COMMAND_HELP_EXAMPLE, COMMAND_SORT_EXAMPLE) + LS;
     }
 
     /** Returns string for showing 'help' command usage instruction */
