@@ -88,7 +88,7 @@ Returns any person having names `Betsy`, `Tim`, or `John`
 === Editing a person by keyword `edit`
 
 Edits person with given index
-Format: `edit <NEWNAME> /p<PHONE> /e<EMAIL> /i<INDEX>
+Format: `edit <NEWNAME> /p<PHONE> /e<EMAIL> /i<INDEX>`
 
 [NOTE]
 ====
@@ -98,7 +98,7 @@ The index refers to the index numbers shown in the most recent listing.
 Examples:
 
 * `list` + 
-`edit John Doe p/98765432 e/johnd@gmail.com /i1`
+`edit John Doe p/98765432 e/johnd@gmail.com /i1` +
 Edits the 1st person details according to user input 
 
 === Deleting a person: `delete`
