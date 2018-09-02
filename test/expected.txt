@@ -66,6 +66,13 @@
 || 	Parameters: INDEX
 || 	Example: delete 1
 || 
+|| sort: Displays all persons as a sorted list
+|| 	Example: sort
+|| 
+|| edit: Edit a person in the address book.
+|| 	Parameters: NAME p/PHONE_NUMBER e/EMAILi/INDEX
+|| 	Example: editJohn Doe p/98765432 e/johnd@gmail.com i/1
+|| 
 || clear: Clears address book permanently.
 || 	Example: clear
 || 
@@ -184,8 +191,9 @@
 || 0 persons found!
 || ===================================================
 || Enter command: || [Command entered:  find betsy]
+||      1. Betsy Choo  Phone Number: 222222  Email: benchoo@nus.edu.sg
 || 
-|| 0 persons found!
+|| 1 persons found!
 || ===================================================
 || Enter command: || [Command entered:  find Betsy]
 || 	1. Betsy Choo  Phone Number: 222222  Email: benchoo@nus.edu.sg
